@@ -1,0 +1,20 @@
+groups:
+  - name: minio
+    interval: 30s
+    rules:
+      - alert: MinioDown
+        expr: probe_success{job="minio"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "minio backup target is down — fleet backups have nowhere to go"
+          runbook: "docs/SELFHOST.md#up"
+
+      - alert: MinioDiskFilling
+        expr: minio_cluster_capacity_usable_free_bytes / minio_cluster_capacity_usable_total_bytes < 0.2
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "minio under 20% free — prune old backups or grow the volume"

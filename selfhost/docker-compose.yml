@@ -1,0 +1,34 @@
+# minio selfhost. s3-compatible object storage on the laptop —
+# offsite target for the fleet's backups (restic/rclone point here,
+# then a copy goes to real offsite weekly). manual runs, no autostart.
+# usage: docker compose -f selfhost/docker-compose.yml --env-file selfhost/.env up -d
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: "no"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - MINIO_ROOT_USER=${ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${ROOT_PASSWORD:-changeme-long-random-12plus}
+      - MINIO_BROWSER_REDIRECT_URL=http://localhost:${CONSOLE_PORT:-8104}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    ports:
+      - "${S3_PORT:-8101}:9000"
+      - "127.0.0.1:${CONSOLE_PORT:-8104}:9001"
+      # console loopback-only: it holds the root creds session.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  minio-data:
+    name: minio-data
